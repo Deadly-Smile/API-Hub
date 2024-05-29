@@ -1,0 +1,9 @@
+version: "3.8"
+services:
+  laravel-server:
+    container_name: app
+    build: ./app
+    volumes:
+      - ./app:/var/www/html
+    ports:
+      - 5000:80
