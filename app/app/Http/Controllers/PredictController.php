@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Redis;
 use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Validator;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -55,4 +56,11 @@ class PredictController extends Controller
             'prediction' => $prediction['prediction'] ?? null
         ]);
     }
+
+    // public function uploadModel(Request $request): JsonResponse
+    // {
+    //     $validator = Validator::make($request->all(), [
+
+    //     ])
+    // }
 }

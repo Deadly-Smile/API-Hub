@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PredictController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,3 +21,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/predict', [PredictController::class, 'guessAnimel']);
+
+Route::get('auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
+Route::get('auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
+Route::post('login', [AuthController::class, 'login']);
+Route::post('register', [AuthController::class, 'register']);
+Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
