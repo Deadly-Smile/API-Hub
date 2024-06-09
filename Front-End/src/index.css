@@ -1,3 +1,76 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.animate-custom-bounce {
+    animation-name: custom-bounce;
+    animation-duration: 8s; /* Adjust the duration as needed */
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite; /* Loop the animation infinitely */
+  }
+  .custom-bounce:hover {
+    animation-play-state: paused;
+  }
+
+  .custom-bounce-small:hover {
+    animation-play-state: paused;
+  }
+
+  .up-down-spin:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes custom-bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes custom-bounce-small {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+/* Add shadow and set initial position */
+.shadow-ping {
+  text-decoration: none;
+  box-shadow: 0 0 5px rgba(4, 218, 54, 0.5); /* Customize the shadow as needed */
+  display: inline-block;
+  position: relative;
+}
+
+/* Define ping animation */
+@keyframes ping {
+  0% {
+    transform: translate(0, 0);
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  }
+  25% {
+    transform: translate(5px, -5px);
+    box-shadow: 10px 0 10px rgba(38, 0, 255, 0.5);
+  }
+  50% {
+    transform: translate(0, 0);
+    box-shadow: 0 0 5px rgba(0, 255, 81, 0.5);
+  }
+  75% {
+    transform: translate(-5px, 5px);
+    box-shadow: -10px 0 10px rgba(255, 0, 0, 0.5);
+  }
+  100% {
+    transform: translate(0, 0);
+    box-shadow: 0 0 5px rgba(111, 0, 255, 0.5);
+  }
+}
+
+/* Apply ping animation to the element */
+.shadow-ping:hover {
+  animation: ping 2s infinite;
+}

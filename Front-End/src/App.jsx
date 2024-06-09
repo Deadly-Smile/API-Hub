@@ -1,35 +1,52 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import "./App.css";
+import { useGetUserQuery } from "./store";
+import LoadingContext from "../Context/LoadingContext";
+import UserContext from "../Context/UserContext";
+import { Provider } from "react-redux";
+import LoadingBar from "react-top-loading-bar";
+import NavConfig from "./components/NavConfig";
+import Footer from "./components/Footer";
+import { Route, Routes } from "react-router-dom";
+import Home from "./components/Home";
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  const { data, isSuccess, isLoading } = useGetUserQuery();
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (isLoading) {
+      setProgress(30);
+    } else {
+      setProgress(100);
+    }
+  }, [isLoading]);
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    // <LoadingContext.Provider value={{ progress, setProgress }}>
+    //   <UserContext.Provider
+    //     value={{ user: data?.data?.user, isLoggedIn: isSuccess }}
+    //   >
+    //     <Provider>
+    //       <header>
+    //         <LoadingBar
+    //           color="#f11946"
+    //           progress={progress}
+    //           onLoaderFinished={() => setProgress(0)}
+    //         />
+    //         <NavConfig />
+    //       </header>
+    //       <section>
+    //         <Routes>
+    //           <Route path="/" element={<Home />} />
+    //         </Routes>
+    //       </section>
+    //       <footer>
+    //         <Footer />
+    //       </footer>
+    //     </Provider>
+    //   </UserContext.Provider>
+    // </LoadingContext.Provider>
+    <p>Hi, this is lepjklhkh</p>
+  );
 }
 
-export default App
+export default App;
