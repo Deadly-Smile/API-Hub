@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const Login = () => {
   return (
     <div className="hero min-h-screen bg-base-200">
@@ -5,9 +7,9 @@ const Login = () => {
         <div className="text-center lg:text-left">
           <h1 className="text-5xl font-bold">Login now!</h1>
           <p className="py-6">
-            Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda
-            excepturi exercitationem quasi. In deleniti eaque aut repudiandae et
-            a id nisi.
+            {
+              "You can publish your AI trained models here, reviwe other's model and lot more. Just login and explore."
+            }
           </p>
         </div>
         <div className="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
@@ -37,6 +39,15 @@ const Login = () => {
                 <a href="#" className="label-text-alt link link-hover">
                   Forgot password?
                 </a>
+              </label>
+              <label className="label">
+                <span className="label-text-alt">
+                  {"Don't have an account? "}
+                  <Link to="#" className="link link-hover link-primary text-lg">
+                    {"Sign up"}
+                  </Link>
+                  {" now!"}
+                </span>
               </label>
             </div>
             <div className="form-control mt-6">
