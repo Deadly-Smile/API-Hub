@@ -1,32 +1,23 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { UsersAPI } from "./APIs/UsersAPI";
-import { PostsAPI } from "./APIs/PostsAPI";
+import { ModelsAPI } from "./APIs/ModelsAPI";
 
 export const Store = configureStore({
   reducer: {
     // not an array, just a bracket notation
     [UsersAPI.reducerPath]: UsersAPI.reducer,
-    [PostsAPI.reducerPath]: PostsAPI.reducer,
+    [ModelsAPI.reducerPath]: ModelsAPI.reducer,
   },
   middleware: (getDefaultMiddleware) => {
     return getDefaultMiddleware()
       .concat(UsersAPI.middleware)
-      .concat(PostsAPI.middleware);
+      .concat(ModelsAPI.middleware);
   },
 });
 setupListeners(Store.dispatch);
 export {
   useGetUserQuery,
-  useGetAllUsersQuery,
-  useGetAllDoctorsQuery,
-  useGetAllAdminsQuery,
-  useApproveAdminMutation,
-  useDisproveAdminMutation,
-  useApproveDoctorMutation,
-  useDisproveDoctorMutation,
-  useDeleteUserMutation,
-  useApplyAdminMutation,
   useEditUserMutation,
   useLogoutMutation,
   useAddUserMutation,
@@ -34,26 +25,18 @@ export {
   useLoginMutation,
   useGetUserByIDQuery,
   useGetUserByUsernameMutation,
-  useGetMessagesQuery,
-  useSendMessageMutation,
-  useUpdateMsgStatusMutation,
-  useUpdateNotificationStatusMutation,
-  useGetRechargeTokensQuery,
-  useDeleteRechargeTokenMutation,
-  useCreateRechargeTokenMutation,
-  useAssignTokenToAdminMutation,
-  useAddMoneyMutation,
-  useDonateToMutation,
-  useGetContactsQuery,
+  useOauthLoginMutation,
+  useVerifyMailMutation,
+  useGetRoleQuery,
 } from "./APIs/UsersAPI";
 
 export {
-  useGetPostsQuery,
-  useAddPostMutation,
-  useVotePostMutation,
-  useAddCommentMutation,
-  useGetThePostQuery,
-  useGetPendingPostsQuery,
-  useDeletePendingPostMutation,
-  useApprovePostMutation,
-} from "./APIs/PostsAPI";
+  useCreateModelMutation,
+  useUploadTestImageMutation,
+  useUploadPythonScriptMutation,
+  useUploadDocumentMutation,
+  useDeleteModelMutation,
+  useUpdateModelMutation,
+  useUpdateModelNameMutation,
+  useGetModelQuery,
+} from "./APIs/ModelsAPI";

@@ -39,7 +39,7 @@ const Navbar = ({
   }, [userName]);
 
   return (
-    <div className="navbar bg-base-100">
+    <div className="navbar bg-base-300">
       <div className="flex-none">
         {isManager && (
           <div className="drawer">
@@ -72,9 +72,22 @@ const Navbar = ({
         </Link>
       </div>
       <div className="navbar-end">
-        <ul className="menu menu-horizontal px-1">
+        <ul className="menu menu-horizontal">
           {renderLinks(linkList, "linkList")}
           {isParent && (
+            <div className="dropdown dropdown-bottom dropdown-end">
+              <button className="btn btn-ghost btn-sm pb-1" tabIndex={0}>
+                {userName}
+              </button>
+              <ul
+                tabIndex={0}
+                className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+              >
+                {renderLinks(parentLinkList, "parentList")}
+              </ul>
+            </div>
+          )}
+          {/* {isParent && (
             <li>
               <details>
                 <summary>{userName}</summary>
@@ -83,8 +96,9 @@ const Navbar = ({
                 </ul>
               </details>
             </li>
-          )}
+          )} */}
         </ul>
+
         <ToggleTheme />
       </div>
     </div>
@@ -96,6 +110,7 @@ Navbar.propTypes = {
   parentLinkList: PropTypes.array,
   manageLinkList: PropTypes.array,
   userName: PropTypes.string,
+  webName: PropTypes.string,
 };
 
 export default Navbar;

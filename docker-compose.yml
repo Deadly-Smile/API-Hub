@@ -1,9 +1,31 @@
-version: "3.8"
+version: '3.8'
+
 services:
-  laravel-server:
-    container_name: app
-    build: ./app
-    volumes:
-      - ./app:/var/www/html
+  laravel:
+    build:
+      context: ./app
     ports:
-      - 5000:80
+      - "8000:443"  # Expose port 8000 for HTTPS
+    volumes:
+      - ./app/default-ssl.conf:/etc/apache2/sites-available/default-ssl.conf
+      - ./app/apache-selfsigned.crt:/etc/ssl/certs/apache-selfsigned.crt
+      - ./app/apache-selfsigned.key:/etc/ssl/private/apache-selfsigned.key
+    environment:
+      - APP_ENV=production  # Set Laravel environment
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=app/database/database.sqlite  # Adjust path as needed
+    depends_on:
+      - database
+
+  database:
+    image: busybox
+    volumes:
+      - ./database:app/database  # Store SQLite database files locally
+
+  react:
+    build:
+      context: ./web
+    ports:
+      - "5173:5173"  # Host port 5173 maps to container port 5173 (frontend)
+    depends_on:
+      - laravel

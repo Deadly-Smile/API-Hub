@@ -34,71 +34,12 @@ const UsersAPI = createApi({
         },
         query: () => "/user",
       }),
-      getAllUsers: builder.query({
+      getRole: builder.query({
         providesTags: (result, error, arg) => {
-          const tags = [{ type: "all-users" }];
+          const tags = [{ type: "user" }];
           return tags;
         },
-        query: ({ currentPage, usersPerPage }) => {
-          let perPage = 8;
-          if (usersPerPage) perPage = usersPerPage;
-          return `get-users?page=${currentPage}&perPage=${perPage}`;
-        },
-      }),
-      getAllAdmins: builder.query({
-        providesTags: (result, error, arg) => {
-          const tags = [{ type: "all-users" }];
-          return tags;
-        },
-        query: ({ currentPage, adminsPerPage }) => {
-          let perPage = 8;
-          if (adminsPerPage) perPage = adminsPerPage;
-          return `get-admins?page=${currentPage}&perPage=${perPage}`;
-        },
-      }),
-      getAllDoctors: builder.query({
-        providesTags: (result, error, arg) => {
-          const tags = [{ type: "all-users" }];
-          return tags;
-        },
-        query: ({ currentPage, doctorsPerPage }) => {
-          let perPage = 8;
-          if (doctorsPerPage) perPage = doctorsPerPage;
-          return `get-doctors?page=${currentPage}&perPage=${perPage}`;
-        },
-      }),
-      deleteUser: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "all-users" }];
-        },
-        query: ({ id }) => {
-          return {
-            url: `/delete-user/${id}`,
-            method: "DELETE",
-          };
-        },
-      }),
-      approveAdmin: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "all-users" }];
-        },
-        query: ({ id }) => {
-          return {
-            url: `/approve-admin/${id}`,
-            method: "POST",
-          };
-        },
-      }),
-      disproveAdmin: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "all-users" }];
-        },
-        query: ({ id }) => {
-          return {
-            url: `/disprove-admin/${id}`,
-            method: "POST",
-          };
-        },
+        query: () => `/user/role`,
       }),
       getUserByID: builder.query({
         query: ({ id }) => {
@@ -113,39 +54,26 @@ const UsersAPI = createApi({
           };
         },
       }),
-      approveDoctor: builder.mutation({
+      oauthLogin: builder.mutation({
         invalidatesTags: (result, error, arg) => {
-          return [{ type: "all-users" }];
+          if (result.token) {
+            localStorage.setItem("login_token", result.token);
+          }
+          return [{ type: "user" }];
         },
-        query: ({ id }) => {
+        query: ({ provider, code }) => {
           return {
-            url: `/approve-doctor/${id}`,
-            method: "POST",
-          };
-        },
-      }),
-      disproveDoctor: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "all-users" }];
-        },
-        query: ({ id }) => {
-          return {
-            url: `/disprove-doctor/${id}`,
+            url: `/auth/${provider}/callback`,
+            body: { code },
             method: "POST",
           };
         },
       }),
       addUser: builder.mutation({
-        query: ({ username, name, email, password, password_confirmation }) => {
+        query: (formData) => {
           return {
-            url: "/users",
-            body: {
-              username,
-              name,
-              email,
-              password,
-              password_confirmation,
-            },
+            url: "/register",
+            body: formData,
             method: "POST",
           };
         },
@@ -185,14 +113,27 @@ const UsersAPI = createApi({
           localStorage.setItem("login_token", result.token);
           return [{ type: "user" }];
         },
-        query: ({ username, password }) => {
+        query: (authInfo) => {
           return {
             url: "/login",
-            body: {
-              username,
-              password,
-            },
+            body: authInfo,
             method: "POST",
+          };
+        },
+      }),
+      verifyMail: builder.mutation({
+        invalidatesTags: (result, error, arg) => {
+          localStorage.setItem("login_token", result.token);
+          return [{ type: "user" }];
+        },
+        query: ({ id, code }) => {
+          return {
+            url: `/verify/email/${id}`,
+            body: {
+              id: id,
+              code: code,
+            },
+            method: "PUT",
           };
         },
       }),
@@ -209,154 +150,12 @@ const UsersAPI = createApi({
           };
         },
       }),
-      applyAdmin: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "user" }];
-        },
-        query: (formDataToSend) => {
-          return {
-            url: "/apply-admin",
-            body: formDataToSend,
-            method: "POST",
-          };
-        },
-      }),
-      getMessages: builder.query({
-        providesTags: (result, error, arg) => {
-          const tags = [{ type: "message", receiverId: arg.receiver }];
-          return tags;
-        },
-        query: ({ receiver, sender }) => `/messages/${receiver}/${sender}`,
-      }),
-      sendMessage: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "message", receiverId: arg.receiver }];
-        },
-        query: ({ receiver, sender, content }) => {
-          return {
-            url: `/message-send`,
-            body: { content, receiver, sender },
-            method: "POST",
-          };
-        },
-      }),
-      updateMsgStatus: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "message", receiverId: arg.senderId }];
-        },
-        query: ({ senderId, messageId }) => {
-          return {
-            url: `/message/update/status`,
-            body: { senderId, messageId },
-            method: "POST",
-          };
-        },
-      }),
-      updateNotificationStatus: builder.mutation({
-        query: ({ noti_id }) => {
-          return {
-            url: `/notification/seen`,
-            body: { noti_id },
-            method: "POST",
-          };
-        },
-      }),
-      getRechargeTokens: builder.query({
-        providesTags: (result, error, arg) => {
-          const tags = [{ type: "token" }];
-          return tags;
-        },
-        query: ({ currentPage, perPage }) => {
-          if (!perPage) perPage = 20;
-          return {
-            url: `/get-recharge-token?page=${currentPage}&perPage=${perPage}`,
-          };
-        },
-      }),
-      createRechargeToken: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "token" }];
-        },
-        query: ({ value, handler }) => {
-          console.log(value, handler);
-          return {
-            url: `/create/recharge-token`,
-            body: { value, handler },
-            method: "POST",
-          };
-        },
-      }),
-      deleteRechargeToken: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "token" }];
-        },
-        query: ({ id }) => {
-          return {
-            url: `/delete-recharge-token/${id}`,
-            method: "GET",
-          };
-        },
-      }),
-      assignTokenToAdmin: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "token" }];
-        },
-        query: ({ id, adminName }) => {
-          return {
-            url: `/assign-recharge-token/${id}`,
-            body: { username: adminName },
-            method: "POST",
-          };
-        },
-      }),
-      addMoney: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "user" }];
-        },
-        query: ({ token }) => {
-          return {
-            url: `/use-recharge-token`,
-            body: { token },
-            method: "POST",
-          };
-        },
-      }),
-      donateTo: builder.mutation({
-        invalidatesTags: (result, error, arg) => {
-          return [{ type: "user" }];
-        },
-        query: ({ amount, id }) => {
-          return {
-            url: `/donate/to_${id}`,
-            body: { amount },
-            method: "POST",
-          };
-        },
-      }),
-      getContacts: builder.query({
-        providesTags: (result, error, arg) => {
-          const tags = [{ type: "contacts" }];
-          return tags;
-        },
-        query: () => {
-          return "/get-contacts";
-        },
-      }),
     };
   },
 });
 
 export const {
   useGetUserQuery,
-  useGetAllUsersQuery,
-  useGetAllDoctorsQuery,
-  useGetAllAdminsQuery,
-  useApproveAdminMutation,
-  useDisproveAdminMutation,
-  useApproveDoctorMutation,
-  useDisproveDoctorMutation,
-  useDeleteUserMutation,
-  useApplyAdminMutation,
   useEditUserMutation,
   useLogoutMutation,
   useAddUserMutation,
@@ -364,16 +163,8 @@ export const {
   useLoginMutation,
   useGetUserByIDQuery,
   useGetUserByUsernameMutation,
-  useGetMessagesQuery,
-  useSendMessageMutation,
-  useUpdateMsgStatusMutation,
-  useUpdateNotificationStatusMutation,
-  useGetRechargeTokensQuery,
-  useDeleteRechargeTokenMutation,
-  useCreateRechargeTokenMutation,
-  useAssignTokenToAdminMutation,
-  useAddMoneyMutation,
-  useDonateToMutation,
-  useGetContactsQuery,
+  useOauthLoginMutation,
+  useVerifyMailMutation,
+  useGetRoleQuery,
 } = UsersAPI;
 export { UsersAPI };

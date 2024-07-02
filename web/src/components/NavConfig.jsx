@@ -1,33 +1,55 @@
 import { useContext, useEffect, useState } from "react";
 import Navbar from "./Navbar";
 import UserContext from "../context/UserContext";
+import { useGetRoleQuery } from "../store";
 
 const NavConfig = () => {
-  const user = useContext(UserContext);
-  // console.log(user);
-  const [username, serUsername] = useState();
+  const { user } = useContext(UserContext);
+  const { data, isSuccess } = useGetRoleQuery();
+  const [username, setUsername] = useState();
   const [activeNavLinks, setActiveNavLinks] = useState([
     { label: "About", link: "/about" },
     { label: "Log in", link: "/login" },
     { label: "Sign up", link: "/signup" },
   ]);
-
-  const [parentList, setParentList] = useState([]);
-  const [manageList, setManageList] = useState([]);
+  const [parentLinkList, setParentLinkList] = useState([]);
+  const [manageLinkList, setManageLinkList] = useState([]);
 
   useEffect(() => {
-    if (user?.userName) {
-      serUsername(user?.userName);
+    if (user?.name) {
+      setUsername(user?.name);
+      setActiveNavLinks([
+        { label: "About", link: "/about" },
+        { label: "My models", link: "/models" },
+        // { label: "Log in", link: "/logout" },
+      ]);
+      setParentLinkList([
+        { label: "Profile", link: `/user/${user?.id}` },
+        { label: "Log out", link: "/logout" },
+      ]);
     } else {
-      serUsername(null);
+      setUsername(null);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (data && isSuccess) {
+      if (data?.slug === "admin") {
+        setManageLinkList([{ lable: "Users", link: "/manage-users" }]);
+      } else if (data?.slug === "master") {
+        setManageLinkList([
+          { lable: "Users", link: "/manage-users" },
+          { lable: "Admins", link: "/manage-admins" },
+        ]);
+      }
+    }
+  }, [data, isSuccess]);
 
   return (
     <Navbar
       linkList={activeNavLinks}
-      parentLinkList={parentList}
-      manageLinkList={manageList}
+      parentLinkList={parentLinkList}
+      manageLinkList={manageLinkList}
       userName={username}
       webName={"Model-Hub"}
     />
