@@ -59,7 +59,6 @@ const ModelsAPI = createApi({
         query: ({ script, id }) => {
           const formData = new FormData();
           formData.append("script", script);
-          console.log(formData);
           return {
             url: `/upload-python-script/${id}`,
             body: formData,
@@ -68,10 +67,10 @@ const ModelsAPI = createApi({
         },
       }),
       uploadDocument: builder.mutation({
-        query: ({ document, id }) => {
+        query: ({ doc, id }) => {
           const formData = new FormData();
-          if (document instanceof File) {
-            formData.append("doc", document);
+          if (doc instanceof File) {
+            formData.append("doc", doc);
           }
           return {
             url: `/upload-document/${id}`,

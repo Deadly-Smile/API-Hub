@@ -96,7 +96,7 @@ const CreateModelPanel = () => {
       const markdownFile = new File([code], "readme.md", {
         type: "text/markdown",
       });
-      uploadDocumentation({ script: markdownFile, id: modelId });
+      uploadDocumentation({ doc: markdownFile, id: modelId });
     } catch (e) {
       console.error(e);
     }
@@ -212,12 +212,12 @@ const CreateModelPanel = () => {
             <CodeLog log={codeLog} />
           </div>
 
-          <div id="below-button-list" className="flex justify-end">
-            <button className="btn btn-error" onClick={handleOnAbort}>
+          <div id="below-button-list" className="flex justify-end ">
+            <button className="btn btn-error mr-1" onClick={handleOnAbort}>
               Cancel
             </button>
             <button
-              className="btn btn-info"
+              className="btn btn-info mr-1"
               disabled={!isFulfiled}
               onClick={() => setEditorId(2)}
             >

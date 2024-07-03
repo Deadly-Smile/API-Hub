@@ -15,6 +15,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class ModelController extends Controller
 {
+    // tested
     public function uploadModel(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -63,6 +64,7 @@ class ModelController extends Controller
         }
     }
 
+    // tested
     public function uploadTestImage(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -92,6 +94,7 @@ class ModelController extends Controller
         return response()->json(['message' => 'test image uploaded', 'image' => Storage::url($model->test_file)], 200);
     }
 
+    // tested
     public function uploadPythonScript(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -128,24 +131,20 @@ class ModelController extends Controller
         return $output;
     }
 
+    // need testing
     public function uploadDocumentation(Request $request, $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'doc' => 'required|file|mimes:md|max:2048',
+            'doc' => 'required|file|max:2048',
         ]);
         if ($validator->fails()) {
             return response()->json(['error' => 'validation error', 'errors' => $validator->errors()], 422);
         }
 
         $file = $request->file('doc');
-        if ($file->getClientOriginalExtension() !== 'py') {
+        if ($file->getClientOriginalExtension() !== 'md') {
             return response()->json(['error' => 'validation error', 'errors' => ['doc' => ['The doc field must be a file of type: md.']]], 422);
         }
-
-        $fileName = 'doc_' . $id . '.md';
-        $path = $file->storeAs('docs', $fileName, 'public');
-
-        return response()->json(["doc" => Storage::url($path)]);
 
         $model = AIModel::findOrFail($id);
         $user = auth()->user();
@@ -159,11 +158,15 @@ class ModelController extends Controller
             Storage::delete($model->doc_file);
         }
 
-        $model->doc_file = $request->file('doc')->store('docs');
+        $fileName = 'doc_' . $id . '.' . $file->getClientOriginalExtension();
+        $path = $file->storeAs('docs', $fileName, 'public');
+
+        $model->doc_file = $path;
         $model->save();
         return response()->json(['message' => 'documentation uploaded'], 200);
     }
 
+    // need testing
     public function deleteModel($id): JsonResponse
     {
         $model = AIModel::find($id);
@@ -173,35 +176,6 @@ class ModelController extends Controller
         }
         $model->delete();
         return response()->json(['message' => 'model deleted'], 200);
-    }
-
-    /**
-     * This NEEDS additional work.
-     * Update the model file for a given ID.
-     *
-     * @param Request $request The HTTP request object.
-     * @param int $id The ID of the model.
-     * @return JsonResponse The JSON response containing the result of the update.
-     */
-    public function updateModelFile(Request $request, $id): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'model' => 'required|file|mimes:keras,h5,pb,tflite,pth,pt,onnx,caffemodel,prototxt,params,json,bin,pkl,model,txt',
-        ]);
-        if ($validator->fails()) {
-            return response()->json(['error' => 'validation error', 'errors' => $validator->errors()], 422);
-        }
-        $model = AIModel::find($id);
-        $user = auth()->user();
-        if ($user->id !== $model->user_id && (Role::findOrFail($user->role_id)->slug !== 'admin' || Role::findOrFail($user->role_id)->slug !== 'master')) {
-            return response()->json(['error' => 'unauthorized'], 401);
-        }
-        if ($model->model_file && Storage::exists($model->model_file)) {
-            Storage::delete($model->model_file);
-        }
-        $model->model_file = $request->file('model')->store('models');
-        $model->save();
-        return response()->json(['message' => 'model file uploaded'], 200);
     }
 
     public function updateName($id, $name): JsonResponse
@@ -247,6 +221,7 @@ class ModelController extends Controller
         return $query->paginate($perPage);
     }
 
+    // tested
     private function testScript($modelPath, $imagePath, $scriptPath)
     {
         $basePath = base_path();
@@ -273,6 +248,7 @@ class ModelController extends Controller
     }
 
 
+    // need testing
     public function predictModel(Request $request, $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
