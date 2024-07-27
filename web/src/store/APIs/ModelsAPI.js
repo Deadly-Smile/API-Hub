@@ -28,13 +28,34 @@ const ModelsAPI = createApi({
   endpoints(builder) {
     return {
       createModel: builder.mutation({
-        query: ({ name, model, id }) => {
+        query: ({ name, parameters, id }) => {
           const formData = new FormData();
           formData.append("name", name);
           if (id) formData.append("id", id);
-          if (model instanceof File) {
-            formData.append("model", model);
-          }
+
+          parameters.forEach((param, index) => {
+            formData.append(
+              `parameters[${index}][parameter_name]`,
+              param.parameter_name
+            );
+            if (param.id) formData.append(`parameters[${index}][id]`, param.id);
+            formData.append(`parameters[${index}][is_file]`, param.is_file);
+            formData.append(
+              `parameters[${index}][is_default]`,
+              param.is_default
+            );
+            formData.append(
+              `parameters[${index}][is_required]`,
+              param.is_required
+            );
+
+            if (param.is_file && param.file) {
+              formData.append(`parameters[${index}][file]`, param.file);
+            } else {
+              formData.append(`parameters[${index}][text]`, param.text);
+            }
+          });
+
           return {
             url: "/upload-model",
             body: formData,

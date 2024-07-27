@@ -9,9 +9,18 @@ class AIModel extends Model
 {
     use HasFactory;
 
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'name',
+        // 'script_file',
+        // 'doc_file',
         'status',
     ];
+
+    public function parameters()
+    {
+        return $this->hasMany(AIModelParameter::class, 'model_id');
+    }
 }

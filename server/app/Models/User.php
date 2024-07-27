@@ -54,4 +54,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(AIModel::class, 'user_id');
     }
+
+    public function getAPIKeys()
+    {
+        return $this->hasMany(APIKey::class, 'user_id');
+    }
 }

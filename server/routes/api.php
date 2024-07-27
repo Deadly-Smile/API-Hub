@@ -2,8 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\ModelController;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ModelController;
 use App\Http\Controllers\PredictController;
 
 Route::post('/predict', [PredictController::class, 'guessAnimel']);
@@ -24,7 +25,7 @@ Route::put('/verify/email/{id}', [AuthController::class, 'verifyMail']);
 
 Route::group(['prefix' => 'model'], function () {
     Route::group(['middleware' => ['auth:sanctum']], function () {
-        Route::post('/upload-model', [ModelController::class, 'uploadModel']);
+        Route::post('/upload-model', [ModelController::class, 'createOrUpdateModel']);
         Route::post('/upload-test-image/{id}', [ModelController::class, 'uploadTestImage']);
         Route::post('/upload-python-script/{id}', [ModelController::class, 'uploadPythonScript']);
         Route::post('/upload-document/{id}', [ModelController::class, 'uploadDocumentation']);
@@ -35,4 +36,8 @@ Route::group(['prefix' => 'model'], function () {
 
     Route::post('/predict-model/{id}', [ModelController::class, 'predictModel']);
     Route::get('/get-model', [ModelController::class, 'getModel']);
+});
+// todo: learn unit testing
+Route::group(['prefix' => 'test'], function () {
+    Route::get('/get-model', [TestController::class, 'getModel']);
 });

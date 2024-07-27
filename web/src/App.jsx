@@ -15,6 +15,8 @@ import VerificationPanel from "./components/VerificationPanel";
 import Logout from "./components/Logout";
 import Profile from "./components/Profile";
 import CreateModelPanel from "./components/CreateModelPanel";
+import About from "./components/About";
+import Guide from "./components/Guide";
 
 const App = () => {
   const { data, isSuccess, isLoading } = useGetUserQuery();
@@ -47,6 +49,8 @@ const App = () => {
             <Route path="/logout" element={<Logout />} />
             <Route path="/user/:id" element={<Profile />} />
             <Route path="/create-model" element={<CreateModelPanel />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/guide" element={<Guide />} />
             <Route
               path="/auth/:provider/callback"
               render={({ match }) => (

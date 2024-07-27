@@ -3,18 +3,159 @@
 namespace App\Http\Controllers;
 
 use App\Models\Role;
-use App\Models\User;
 use App\Models\AIModel;
 use Illuminate\Http\Request;
+use App\Models\AIModelParameter;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Symfony\Component\Process\Process;
+use App\Http\Requests\CreateOrUpdateModelRequest;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
 
 class ModelController extends Controller
 {
+
+    // todo: implement parameters array insertion and tag attachment
+    public function createOrUpdateModel(CreateOrUpdateModelRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+        $user = auth()->user();
+        $model = null;
+        $id = $data['id'] ?? null;
+        $existingIds = [];
+
+        if ($id != null) {
+            $model = AIModel::find($data['id']);
+            if (!$model) {
+                return response()->json(['error' => 'model not found'], 404);
+            }
+            if ($user->id !== $model->user_id && !in_array($user->role->slug, ['admin', 'master'])) {
+                return response()->json(['error' => 'unauthorized'], 401);
+            }
+            $model->name = $data['name'];
+            $model->save();
+        } else {
+            $model = AIModel::create([
+                'name' => $data['name'],
+                'user_id' => auth()->user()->id,
+                'status' => 'pending',
+            ]);
+        }
+
+        $status_code = 200;
+        // dd($data['parameters']);
+        foreach ($data['parameters'] as $parameter) {
+            $result = $this->createOrUpdateParameter($parameter, $model->id);
+            if ($status_code === 200 && $result['status'] === 201) {
+                $status_code = $result['status'];
+            }
+            if ($result['status'] >= 200) {
+                $existingIds[] = $result['id'];
+            } else {
+                $model->delete();
+                return response()->json(['message' => 'Error occurred while creating parameter'], 400);
+            }
+        }
+
+        $this->deleteUnusedParameters($model, $existingIds);
+
+        return response()->json(['model' => $model, 'parameters' => $model->parameters()->get()], $status_code);
+    }
+
+    private function createOrUpdateParameter($data, $modelId)
+    {
+        // dd($data);
+        $parameter = isset($data['id']) ? AIModelParameter::findOrFail($data['id']) : null;
+        $status_code = 0;
+        $error_message = '';
+
+        if (!$parameter) {
+            // Create new parameter
+            $parameter = AIModelParameter::create([
+                'model_id' => $modelId,
+                'parameter_name' => $data['parameter_name'],
+                'is_file' => $data['is_file'],
+                'is_default' => $data['is_default'],
+                'is_required' => $data['is_required'],
+            ]);
+            $status_code = 201;
+        } else {
+            // Update existing parameter
+            $parameter->update([
+                'parameter_name' => $data['parameter_name'],
+                'is_file' => $data['is_file'],
+                'is_default' => $data['is_default'],
+                'is_required' => $data['is_required'],
+            ]);
+            $status_code = 200;
+        }
+        if ($data['is_default']) {
+            if ($data['is_file']) {
+                if (isset($data['file'])) {
+                    if (is_object($data['file'])) {
+                        // Delete existing file if any
+                        if ($parameter->file) {
+                            Storage::disk('public')->delete($parameter->file);
+                        }
+                        $fileName = 'file_' . $parameter->id . "." . $data['file']->getClientOriginalExtension();
+                        $path = $data['file']->storeAs('parameters', $fileName, 'public');
+                        $parameter->file = $path;
+                        $parameter->text = null;
+                    } else {
+                        // If it's a string, assume it's an existing file path
+                        $parameter->file = $data['file'];
+                        $parameter->text = null;
+                    }
+                } else {
+                    $status_code = 422;
+                    $error_message = 'File is required but not provided';
+                }
+            } else {
+                $parameter->text = $data['text'];
+                $parameter->file = null;
+            }
+        }
+
+        $parameter->save();
+        return ['id' => $parameter->id, 'status' => $status_code, 'error' => $error_message];
+    }
+
+
+    private function deleteUnusedParameters($model, $existingIds)
+    {
+        $parametersToDelete = $model->parameters()->whereNotIn('id', $existingIds)->get();
+        foreach ($parametersToDelete as $parameter) {
+            if ($parameter->file) {
+                Storage::disk('public')->delete($parameter->file);
+            }
+            $parameter->delete();
+        }
+    }
+
+    public function addParameter(Request $request, $id): JsonResponse
+    {
+        $model = AIModel::findOrFail($id);
+        $user = auth()->user();
+        if ($user->id !== $model->user_id && !in_array($user->role->slug, ['admin', 'master'])) {
+            return response()->json(['error' => 'unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'parameter_name' => 'required|string|max:255',
+            'is_file' => 'required|boolean',
+            'file' => 'required_if:is_file,true|file',
+            'text' => 'required_if:is_file,false|string',
+            'is_default' => 'required_if:is_required,false|boolean',
+            'is_required' => 'required_if:is_default,false|boolean',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['error' => 'validation error', 'errors' => $validator->errors()], 422);
+        }
+        return response()->json([], $this->createOrUpdateParameter($request, $id));
+    }
+
     // tested
     public function uploadModel(Request $request): JsonResponse
     {

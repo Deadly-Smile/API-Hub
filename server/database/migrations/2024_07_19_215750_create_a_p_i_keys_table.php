@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('a_i_models', function (Blueprint $table) {
+        Schema::create('a_p_i_keys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('name');
-            $table->string('script_file')->nullable();
-            $table->string('doc_file')->nullable();
-            $table->string('status');
+            $table->foreignId('model_id')->constrained('a_i_models')->onDelete('cascade');
+            $table->string('app_id')->unique();
+            $table->string('secret_key')->unique();
+            $table->timestamp('expires');
+            $table->integer('total_number_of_use')->default(0);
+            $table->integer('today_use')->default(0);
             $table->timestamps();
         });
     }
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('a_i_models');
+        Schema::dropIfExists('a_p_i_keys');
     }
 };

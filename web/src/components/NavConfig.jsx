@@ -9,6 +9,7 @@ const NavConfig = () => {
   const [username, setUsername] = useState();
   const [activeNavLinks, setActiveNavLinks] = useState([
     { label: "About", link: "/about" },
+    { label: "Guide", link: "/guide" },
     { label: "Log in", link: "/login" },
     { label: "Sign up", link: "/signup" },
   ]);
@@ -20,7 +21,9 @@ const NavConfig = () => {
       setUsername(user?.name);
       setActiveNavLinks([
         { label: "About", link: "/about" },
+        { label: "Guide", link: "/guide" },
         { label: "My models", link: "/models" },
+        { label: "Create new model", link: "/create-model" },
         // { label: "Log in", link: "/logout" },
       ]);
       setParentLinkList([
@@ -51,7 +54,7 @@ const NavConfig = () => {
       parentLinkList={parentLinkList}
       manageLinkList={manageLinkList}
       userName={username}
-      webName={"Model-Hub"}
+      webName={"API-Hub"}
     />
   );
 };

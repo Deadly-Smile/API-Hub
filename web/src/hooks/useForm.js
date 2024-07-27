@@ -11,11 +11,19 @@ const useForm = (initialState) => {
     });
   };
 
+  const handleFileChange = (e) => {
+    const { name } = e.target;
+    setFormState({
+      ...formState,
+      [name]: e.target.files[0],
+    });
+  };
+
   const resetForm = () => {
     setFormState(initialState);
   };
 
-  return [formState, handleChange, resetForm];
+  return [formState, handleChange, resetForm, setFormState, handleFileChange];
 };
 
 export default useForm;
