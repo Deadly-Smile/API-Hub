@@ -3,6 +3,7 @@ import EditorPanel from "./EditorPanel";
 import {
   useCreateModelMutation,
   useDeleteModelMutation,
+  useGetInitialCodeQuery,
   useUploadDocumentMutation,
   useUploadPythonScriptMutation,
 } from "../store";
@@ -13,8 +14,19 @@ import ParameterForm from "./ParameterForm";
 import ParameterView from "./ParameterView";
 import UserContext from "../context/UserContext";
 import NotFound from "./NotFound";
+import CodeLog from "./CodeLog";
+import LoadingContext from "../context/LoadingContext";
+import ToastMessage from "./ToastMessage";
+import { useNavigate } from "react-router-dom";
+import CustomDialog from "./CustomDialog";
+import ModelTestForm from "./ModelTestForm";
 
-// const backEndURL = import.meta.env.VITE_BACKEND_URL;
+/*
+ * Big issue:
+ * Parameters are not updating so each time parameters are updatated new parameters gets created.
+ * This is not good for efficiency but I don't want to waste time on this.
+ */
+
 const CreateModelPanel = () => {
   const [createModel, createModelResult] = useCreateModelMutation();
   const [uploadPythonScript, uploadPythonScriptResult] =
@@ -22,45 +34,147 @@ const CreateModelPanel = () => {
   const [uploadDocumentation, uploadDocumentationResult] =
     useUploadDocumentMutation();
   const [deleteModel, deleteModelResult] = useDeleteModelMutation();
+
   const [editorId, setEditorId] = useState(1);
   const [codeLog, setCodeLog] = useState({
     type: "Info",
-    message: "Prediction result",
+    message: "",
   });
   const [name, setName] = useState("");
   const [modelId, setModelId] = useState("");
+  const {
+    codeSnippet,
+    // codeSnippetIsSuccess,
+    // codeSnippetIsError,
+    codeSnippetIsLoading,
+  } = useGetInitialCodeQuery();
+  const [pythonCode, setPythonCode] = useState(
+    codeSnippet?.code || PythonScriptSnippet
+  );
   const [isFulfiled, setIsFulfilled] = useState(false);
   const [parameters, setParameters] = useState([]);
   const [parameterToDelete, setParameterToDelete] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [confirmation, setConfirmation] = useState(false);
   const { user } = useContext(UserContext);
+  const [showToast, setShowToast] = useState(false);
+  const [toastList, setToastList] = useState([]);
+  const isLoadingContext = useContext(LoadingContext);
+  const [modelUpdate, setModelUpdate] = useState(false);
+  const [code, setCode] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (
+      createModelResult.isLoading ||
+      uploadPythonScriptResult.isLoading ||
+      uploadDocumentationResult.isLoading ||
+      deleteModelResult.isLoading ||
+      codeSnippetIsLoading
+    ) {
+      isLoadingContext.setProgress(30);
+    } else {
+      isLoadingContext.setProgress(100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    createModelResult.isLoading,
+    deleteModelResult.isLoading,
+    uploadDocumentationResult.isLoading,
+    uploadPythonScriptResult.isLoading,
+  ]);
+
+  const handleShowToast = () => {
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+      setToastList([]);
+    }, 3000);
+  };
 
   const handleNameChange = (event) => {
     setName(event.target.value);
     if (event.target.value.length > 3) {
       setIsFulfilled(true);
+    } else {
+      setIsFulfilled(false);
     }
   };
 
   useEffect(() => {
     if (createModelResult.isSuccess) {
       setModelId(createModelResult?.data?.model?.id);
-      setConfirmation(true);
       setParameters(createModelResult?.data?.parameters);
+      setPythonCode(createModelResult?.data?.code);
+      if (createModelResult.status === 201) {
+        setToastList([
+          { message: "Model created successfully", type: "success" },
+        ]);
+      } else if (createModelResult.status === 200) {
+        setToastList([
+          { message: "Model updated successfully", type: "success" },
+        ]);
+      }
+    } else if (createModelResult.status === 404) {
+      setToastList([{ message: "Model not found", type: "error" }]);
+    } else if (createModelResult.status === 400) {
+      setToastList([
+        { message: "An unexpected error occurred", type: "error" },
+      ]);
+    } else if (createModelResult.status === 500) {
+      setToastList([{ message: "Internal server error", type: "error" }]);
+    } else if (createModelResult.status === 422) {
+      Object.keys(createModelResult?.error?.data?.errors).forEach((field) => {
+        createModelResult?.error?.data?.errors[field].forEach(
+          (errorMessage) => {
+            setToastList((prevToastList) => [
+              ...prevToastList,
+              { message: errorMessage, type: "error" },
+            ]);
+          }
+        );
+      });
+    } else {
+      setToastList([{ message: "Don't know what happened", type: "error" }]);
     }
+    handleShowToast();
   }, [
+    createModelResult?.data?.code,
     createModelResult?.data?.model?.id,
     createModelResult?.data?.parameters,
+    createModelResult?.error?.data?.errors,
     createModelResult.isSuccess,
+    createModelResult.status,
   ]);
 
-  const handleSubmitPython = (code) => {
+  // const handleSubmitPython = (code) => {
+  //   try {
+  //     const pythonFile = new File([code], "script.py", {
+  //       type: "text/x-python",
+  //     });
+  //     uploadPythonScript({ script: pythonFile, id: modelId });
+  //   } catch (e) {
+  //     console.error(e);
+  //   }
+  // };
+
+  const testCode = (code) => {
+    // open dialog
+    setCode(code);
+    document.getElementById("test-model-dialog").showModal();
+  };
+
+  const handleTestFormSubmit = (parameters) => {
+    console.log(parameters);
     try {
       const pythonFile = new File([code], "script.py", {
         type: "text/x-python",
       });
-      uploadPythonScript({ script: pythonFile, id: modelId });
+      uploadPythonScript({
+        script: pythonFile,
+        id: modelId,
+        parameters: parameters,
+      });
     } catch (e) {
       console.error(e);
     }
@@ -79,12 +193,15 @@ const CreateModelPanel = () => {
 
   const handleOnAbort = () => {
     deleteModel({ id: modelId });
+    navigate("/home");
   };
 
-  const handleFinish = () => {
-    createModel({ name, parameters, id: modelId });
-    // todo: promt user confirmation
-  };
+  useEffect(() => {
+    if (modelUpdate) {
+      createModel({ name, parameters, id: modelId });
+      setModelUpdate(false);
+    }
+  }, [createModel, modelId, modelUpdate, name, parameters]);
 
   const handleConfirmation = () => {
     setConfirmation(false);
@@ -93,6 +210,7 @@ const CreateModelPanel = () => {
 
   const handleAddParameter = (parameter) => {
     setParameters([...parameters, parameter]);
+    setModelUpdate(true);
   };
 
   const handleEditParameter = (parameter) => {
@@ -103,6 +221,7 @@ const CreateModelPanel = () => {
     }
     setEditIndex(null);
     document.getElementById("parameter-edit-form").close();
+    setModelUpdate(true);
   };
 
   const handleDeleteRequest = (param) => {
@@ -110,14 +229,13 @@ const CreateModelPanel = () => {
     document.getElementById("parameter-delete").showModal();
   };
 
-  const handleDeleteParameter = (e) => {
-    e.preventDefault();
+  const handleDeleteParameter = () => {
     setParameters(parameters.filter((param) => param !== parameterToDelete));
     setParameterToDelete(null);
-    document.getElementById("parameter-delete").close();
+    setModelUpdate(true);
   };
 
-  const handleEditRequest = (param, index) => {
+  const handleEditRequest = (index) => {
     setEditIndex(index);
     document.getElementById("parameter-edit-form").showModal();
   };
@@ -169,37 +287,35 @@ const CreateModelPanel = () => {
               </label>
             </div>
 
-            <div className="max-h-[60vh] overflow-auto">
+            <div className="max-h-[40vh] overflow-auto">
               {parameters.map((param, index) => (
                 <ParameterView
                   key={index}
                   parameter={param}
                   onDelete={() => handleDeleteRequest(param)}
-                  onEdit={() => handleEditRequest(param, index)}
+                  onEdit={() => handleEditRequest(index)}
                 />
               ))}
             </div>
             <button
               className="btn btn-primary"
+              disabled={!isFulfiled}
               onClick={() => {
                 document.getElementById("parameter-form").showModal();
               }}
             >
               Add Parameter
             </button>
-            {confirmation && (
-              <button
-                className="btn btn-error"
-                onClick={() => {
-                  document.getElementById("test-form").showModal();
-                }}
-              >
-                Test model
-              </button>
-            )}
+
+            <CodeLog log={codeLog} />
 
             <div id="below-button-list" className="flex justify-end ">
-              <button className="btn btn-error mr-1" onClick={handleOnAbort}>
+              <button
+                className="btn btn-error mr-1"
+                onClick={() => {
+                  document.getElementById("cancel-model-creation").showModal();
+                }}
+              >
                 Cancel
               </button>
               <button
@@ -220,9 +336,9 @@ const CreateModelPanel = () => {
                 <button
                   className="btn btn-success"
                   disabled={!isFulfiled}
-                  onClick={handleFinish}
+                  onClick={() => setModelUpdate(true)}
                 >
-                  Done!
+                  {confirmation ? "update" : "Submit"}
                 </button>
               )}
             </div>
@@ -232,10 +348,11 @@ const CreateModelPanel = () => {
         <div className="w-3/5">
           {editorId === 1 && (
             <EditorPanel
-              initialCode={PythonScriptSnippet}
+              initialCode={pythonCode}
               language={"python"}
               isDisabledSubmit={false}
-              onSubmit={handleSubmitPython}
+              onSubmit={testCode}
+              submitText="Test code"
             />
           )}
           {editorId === 2 && (
@@ -254,53 +371,85 @@ const CreateModelPanel = () => {
             />
           )}
         </div>
-        <dialog
-          id="parameter-form"
-          className="modal modal-bottom sm:modal-middle"
-        >
-          <ParameterForm
-            onSubmit={handleAddParameter}
-            // existing={parameterToEdit}
-            submitText="Add Parameter"
-          />
-        </dialog>
-        <dialog
-          id="parameter-edit-form"
-          className="modal modal-bottom sm:modal-middle"
-        >
-          <ParameterForm
-            onSubmit={handleEditParameter}
-            submitText="Edit Parameter"
-          />
-        </dialog>
-        <dialog
-          id="parameter-delete"
-          className="modal modal-bottom sm:modal-middle"
-        >
-          <div className="modal-box">
-            <h3 className="font-bold text-lg">Attention!</h3>
-            <p className="py-4">
-              Are you sure you want to delete this parameter?
-            </p>
-            <form className="flex justify-end" onSubmit={handleDeleteParameter}>
+        <>
+          <dialog
+            id="parameter-form"
+            className="modal modal-bottom sm:modal-middle"
+          >
+            <ParameterForm
+              onSubmit={handleAddParameter}
+              // existing={parameterToEdit}
+              submitText="Add Parameter"
+            />
+          </dialog>
+          <dialog
+            id="parameter-edit-form"
+            className="modal modal-bottom sm:modal-middle"
+          >
+            <ParameterForm
+              onSubmit={handleEditParameter}
+              submitText="Edit Parameter"
+            />
+          </dialog>
+          <CustomDialog
+            title="Delete Parameter?"
+            componentId="parameter-delete"
+          >
+            <div className="py-1">
+              <p>Are you sure you want to delete this parameter?</p>
+              <p className="label-text text-error">{`Clicking "Delete!" button will reinitialize the python script*`}</p>
+            </div>
+            <form
+              className="flex justify-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleDeleteParameter();
+                document.getElementById("parameter-delete").close();
+              }}
+            >
               <button className="btn btn-error mx-2" type="submit">
-                Delete
+                Delete!
               </button>
             </form>
-            <div className="modal-action">
-              <form method="dialog">
-                <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
-                  ✕
-                </button>
-              </form>
+          </CustomDialog>
+          <CustomDialog title="Attention!!" componentId="cancel-model-creation">
+            <div className="py-1">
+              <p>
+                Are you sure you want to cancel this model? It would erase all
+                the proggress you have made.
+              </p>
             </div>
-          </div>
-        </dialog>
+            <form
+              className="flex justify-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleOnAbort();
+                document.getElementById("cancel-model-creation").close();
+              }}
+            >
+              <button className="btn btn-error mx-2" type="submit">
+                Yes, I am sure
+              </button>
+            </form>
+          </CustomDialog>
+          <CustomDialog title="Test your code:" componentId="test-model-dialog">
+            <ModelTestForm
+              parameters={parameters}
+              onSubmit={handleTestFormSubmit}
+              componentId="test-model-dialog"
+            />
+          </CustomDialog>
+        </>
       </div>
     );
   }
 
-  return <>{render}</>;
+  return (
+    <>
+      {showToast && <ToastMessage toastList={toastList} />}
+      {render}
+    </>
+  );
 };
 
 export default CreateModelPanel;

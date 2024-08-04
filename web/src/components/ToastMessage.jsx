@@ -58,7 +58,7 @@ const ToastMessage = ({ toastList }) => {
   };
 
   return (
-    <div className="toast toast-end max-w-sm w-full">
+    <div className="toast toast-end max-w-sm w-full z-50">
       {toastList.map((toast, index) => (
         <div
           key={index}

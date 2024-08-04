@@ -39,4 +39,5 @@ export {
   useUpdateModelMutation,
   useUpdateModelNameMutation,
   useGetModelQuery,
+  useGetInitialCodeQuery,
 } from "./APIs/ModelsAPI";

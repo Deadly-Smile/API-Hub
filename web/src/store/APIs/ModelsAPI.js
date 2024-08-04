@@ -77,9 +77,19 @@ const ModelsAPI = createApi({
         },
       }),
       uploadPythonScript: builder.mutation({
-        query: ({ script, id }) => {
+        query: ({ script, id, parameters }) => {
           const formData = new FormData();
           formData.append("script", script);
+          formData.append("id", id);
+
+          Object.entries(parameters).forEach(([key, value]) => {
+            if (value instanceof File) {
+              formData.append(key, value);
+            } else {
+              formData.append(key, value);
+            }
+          });
+
           return {
             url: `/upload-python-script/${id}`,
             body: formData,
@@ -127,6 +137,14 @@ const ModelsAPI = createApi({
           };
         },
       }),
+      getInitialCode: builder.query({
+        query: () => {
+          return {
+            url: `get-code-snippet`,
+            method: "GET",
+          };
+        },
+      }),
       getModel: builder.query({
         // eslint-disable-next-line no-unused-vars
         providesTags: (result, error, arg) => {
@@ -160,5 +178,6 @@ export const {
   useUpdateModelMutation,
   useUpdateModelNameMutation,
   useGetModelQuery,
+  useGetInitialCodeQuery,
 } = ModelsAPI;
 export { ModelsAPI };

@@ -36,8 +36,10 @@ Route::group(['prefix' => 'model'], function () {
 
     Route::post('/predict-model/{id}', [ModelController::class, 'predictModel']);
     Route::get('/get-model', [ModelController::class, 'getModel']);
+    Route::get('/get-code-snippet', [ModelController::class, 'getDefaultScript']);
 });
 // todo: learn unit testing
 Route::group(['prefix' => 'test'], function () {
     Route::get('/get-model', [TestController::class, 'getModel']);
+    Route::get('/get-parameter', [TestController::class, 'getParameter']);
 });

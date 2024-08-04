@@ -27,7 +27,7 @@ class CreateOrUpdateModelRequest extends FormRequest
         $rules = [
             'name' => 'required|string|max:255',
             'id' => 'integer|nullable',
-            'parameters' => 'required|array',
+            'parameters' => 'array',
             'parameters.*.id' => 'integer|nullable',
             'parameters.*.parameter_name' => 'required|string|max:255',
             'parameters.*.is_file' => 'required|boolean',

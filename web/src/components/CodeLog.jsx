@@ -14,12 +14,14 @@ const CodeLog = ({ log }) => {
 
   return (
     <div className="mockup-code rounded-sm">
-      <pre data-prefix="$" className="text-lg">
-        <code>{log.type}</code>
+      <pre data-prefix="$" className={getMessageClass(log.type)}>
+        <code>Output:</code>
       </pre>
-      <pre data-prefix=">" className={getMessageClass(log.type)}>
-        <code>{log.message}</code>
-      </pre>
+      {log.message.split("\n").map((line, index) => (
+        <pre key={index} className={getMessageClass(log.type)}>
+          <code>{line}</code>
+        </pre>
+      ))}
     </div>
   );
 };

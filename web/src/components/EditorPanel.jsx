@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Editor } from "@monaco-editor/react";
 import PropTypes from "prop-types";
 
@@ -13,10 +13,17 @@ const EditorPanel = ({
   onEditorChange,
   isDisabledSubmit,
   onSubmit,
+  submitText,
 }) => {
   // const [code, setCode] = useState(initialCode);
   const [theme, setTheme] = useState(initialTheme);
   const [value, setValue] = useState(initialCode);
+
+  useEffect(() => {
+    if (initialCode) {
+      setValue(initialCode);
+    }
+  }, [initialCode]);
 
   const handleEditorChange = (value) => {
     setValue(value);
@@ -48,14 +55,14 @@ const EditorPanel = ({
           ))}
         </select>
         <button className="btn btn-sm btn-warning" onClick={resetCode}>
-          {resetLabel}
+          <span className="flex">{resetLabel}</span>
         </button>
         <button
           className="btn btn-sm btn-success"
           disabled={isDisabledSubmit}
           onClick={() => onSubmit(value)}
         >
-          Submit
+          {submitText}
         </button>
       </div>
       <div className="mb-2">
@@ -84,6 +91,7 @@ EditorPanel.propTypes = {
   onEditorChange: PropTypes.func,
   isDisabledSubmit: PropTypes.bool.isRequired,
   onSubmit: PropTypes.func,
+  submitText: PropTypes.string.isRequired,
 };
 
 export default EditorPanel;

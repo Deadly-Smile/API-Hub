@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Helpers;
+
+class DefaultPythonSnippet
+{
+    public const DELAULT_SNIPPET = "###########################################################################
+# Do not edit this part of the code
+import tensorflow as tf
+import sys
+import numpy as np
+###########################################################################
+
+# Don't need to return anything, just print the result depending the result
+def predict(image_path, model):
+    # This is the sample code for cat-dog classification, you can edit from here
+    image = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
+
+    image = tf.keras.utils.load_img(
+        image_path,
+        color_mode=\"rgb\",
+        target_size=(64,64),
+    )
+
+    input_arr = tf.keras.utils.img_to_array(image)
+    input_arr = np.array([input_arr])
+    predictions = model.predict(input_arr)
+
+    prediction = 'dog' if predictions[0][0] > 0.5 else 'cat'
+
+    print(prediction)
+
+###########################################################################
+# Do not edit this part of the code
+model_path = sys.argv[1]
+image_path = sys.argv[2]
+
+model = tf.keras.models.load_model(model_path)
+predict(image_path, model)
+###########################################################################
+";
+    /**
+     * Create a new class instance.
+     */
+    public function __construct()
+    {
+        // does nothing
+    }
+}

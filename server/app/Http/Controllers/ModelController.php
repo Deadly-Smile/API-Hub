@@ -7,6 +7,7 @@ use App\Models\AIModel;
 use Illuminate\Http\Request;
 use App\Models\AIModelParameter;
 use Illuminate\Http\JsonResponse;
+use App\Helpers\DefaultPythonSnippet;
 use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -17,7 +18,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
 class ModelController extends Controller
 {
 
-    // todo: implement parameters array insertion and tag attachment
+    // todo: tag attachment
     public function createOrUpdateModel(CreateOrUpdateModelRequest $request): JsonResponse
     {
         $data = $request->validated();
@@ -40,7 +41,7 @@ class ModelController extends Controller
             $model = AIModel::create([
                 'name' => $data['name'],
                 'user_id' => auth()->user()->id,
-                'status' => 'pending',
+                'status' => 'incomplete',
             ]);
         }
 
@@ -60,8 +61,9 @@ class ModelController extends Controller
         }
 
         $this->deleteUnusedParameters($model, $existingIds);
+        $code_snippet = $this->generateScriptFile($model);
 
-        return response()->json(['model' => $model, 'parameters' => $model->parameters()->get()], $status_code);
+        return response()->json(['model' => $model, 'parameters' => $model->parameters()->get(), 'code' => $code_snippet], $status_code);
     }
 
     private function createOrUpdateParameter($data, $modelId)
@@ -99,7 +101,7 @@ class ModelController extends Controller
                         if ($parameter->file) {
                             Storage::disk('public')->delete($parameter->file);
                         }
-                        $fileName = 'file_' . $parameter->id . "." . $data['file']->getClientOriginalExtension();
+                        $fileName = 'file_' . $data['parameter_name'] . "_" . $parameter->id . "." . $data['file']->getClientOriginalExtension();
                         $path = $data['file']->storeAs('parameters', $fileName, 'public');
                         $parameter->file = $path;
                         $parameter->text = null;
@@ -132,6 +134,58 @@ class ModelController extends Controller
             }
             $parameter->delete();
         }
+    }
+
+    private function generateScriptFile($model): string
+    {
+        $parameters = $model->parameters()->get();
+        $functionArguments = [];
+        $functionCalls = [];
+        $codeArguments = [];
+
+        $i = 1;
+        foreach ($parameters as $parameter) {
+            $name = $parameter->parameter_name;
+            $functionArguments[] = $name;
+            if ($parameter->is_file) {
+                $functionCalls[] = "'{$name}': {$name}";
+            } else {
+                $functionCalls[] = "'{$name}': {$name}";
+            }
+            $codeArguments[] = "sys.argv[{$i}]";
+            $i++;
+        }
+
+        $functionArgumentsString = implode(', ', $functionArguments);
+        $codeArgumentsString = implode(', ', $codeArguments);
+
+        $scriptTemplate = <<<EOD
+###########################################################################
+# Do not edit this part of the code
+import sys
+###########################################################################
+
+def predict({$functionArgumentsString}):
+    # Your code here...
+
+###########################################################################
+# Do not edit this part of the code
+predict(
+    {$codeArgumentsString}
+)
+###########################################################################
+EOD;
+
+        $scriptPath = 'scripts/script_' . $model->id . '.py';
+        Storage::disk('public')->put($scriptPath, $scriptTemplate);
+        $model->script_file = $scriptPath;
+        $model->save();
+        return $scriptTemplate;
+    }
+
+    public function getDefaultScript(): JsonResponse
+    {
+        return response()->json(['code' => DefaultPythonSnippet::DELAULT_SNIPPET], 200);
     }
 
     public function addParameter(Request $request, $id): JsonResponse
@@ -238,6 +292,7 @@ class ModelController extends Controller
     // tested
     public function uploadPythonScript(Request $request, $id)
     {
+        return response()->json(['request' => $request]);
         $validator = Validator::make($request->all(), [
             'script' => 'required|file|max:2048',
         ]);
@@ -268,6 +323,7 @@ class ModelController extends Controller
 
         $model->script_file = $path;
         $model->save();
+        // needs work
         $output = $this->testScript($model->model_file, $model->test_file, $model->script_file);
         return $output;
     }

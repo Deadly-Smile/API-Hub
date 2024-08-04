@@ -17,13 +17,15 @@ const ParameterView = ({ parameter, onDelete, onEdit }) => {
 
       <label className="label-text">
         {parameter?.parameter_name}
-        <span>({parameter?.is_file ? "File" : "Text"})</span>
+        <span>({parameter?.is_default ? "Default" : "User input"})</span>
       </label>
-      {parameter?.is_default && (
-        <label className="label-text">Loaded parameter</label>
-      )}
-      {parameter?.is_required && (
-        <label className="label-text">Required parameter</label>
+      <label className="label-text">
+        Content type: <span>{parameter?.is_file ? "File" : "Text"}</span>
+      </label>
+      {!parameter?.is_default && (
+        <label className="label-text">
+          Is required: <span>{parameter?.is_required ? "Yes" : "No"}</span>
+        </label>
       )}
     </div>
   );

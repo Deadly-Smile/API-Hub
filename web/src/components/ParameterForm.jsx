@@ -57,6 +57,7 @@ const ParameterForm = ({ onSubmit, submitText }) => {
           <input
             type="text"
             name="parameter_name"
+            required
             value={formState.parameter_name}
             onChange={handleChange}
             placeholder="Enter parameter name..."
@@ -153,6 +154,13 @@ const ParameterForm = ({ onSubmit, submitText }) => {
             </label>
           </div>
         )}
+        <div>
+          <label className="label">
+            <span className="label-text text-error">
+              {`Clicking "${submitText}" button will reinitialize the python script*`}
+            </span>
+          </label>
+        </div>
         <div className="flex justify-end">
           <button className="btn btn-success mx-2" type="submit">
             {submitText}
