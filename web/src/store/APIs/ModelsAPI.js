@@ -78,21 +78,26 @@ const ModelsAPI = createApi({
       }),
       uploadPythonScript: builder.mutation({
         query: ({ script, id, parameters }) => {
-          const formData = new FormData();
-          formData.append("script", script);
-          formData.append("id", id);
+          const formDataObject = new FormData();
+          formDataObject.append("script", script);
+          formDataObject.append("id", +id);
 
-          Object.entries(parameters).forEach(([key, value]) => {
-            if (value instanceof File) {
-              formData.append(key, value);
+          parameters.forEach((param, index) => {
+            if (param.is_file) {
+              formDataObject.append(`parameters[${index}][value]`, param.value);
             } else {
-              formData.append(key, value);
+              formDataObject.append(`parameters[${index}][value]`, param.value);
             }
+            formDataObject.append(`parameters[${index}][id]`, +param.id);
+            formDataObject.append(
+              `parameters[${index}][is_file]`,
+              param.is_file
+            );
           });
 
           return {
             url: `/upload-python-script/${id}`,
-            body: formData,
+            body: formDataObject,
             method: "POST",
           };
         },

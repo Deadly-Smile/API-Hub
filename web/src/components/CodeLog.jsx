@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+
 const CodeLog = ({ log }) => {
   const getMessageClass = (type) => {
     switch (type) {
@@ -12,22 +13,49 @@ const CodeLog = ({ log }) => {
     }
   };
 
+  // Function to check if a string is valid JSON
+  const isJson = (str) => {
+    try {
+      JSON.parse(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // Function to render JSON objects with indentation
+  const renderJson = (json) => {
+    return (
+      <pre className={getMessageClass(log.type)}>
+        <code>{JSON.stringify(json, null, 2)}</code>
+      </pre>
+    );
+  };
+
   return (
     <div className="mockup-code rounded-sm">
       <pre data-prefix="$" className={getMessageClass(log.type)}>
         <code>Output:</code>
       </pre>
-      {log.message.split("\n").map((line, index) => (
-        <pre key={index} className={getMessageClass(log.type)}>
-          <code>{line}</code>
-        </pre>
-      ))}
+      {typeof log.message === "object" && !Array.isArray(log.message)
+        ? // If message is an object (not an array), render as JSON
+          renderJson(log.message)
+        : // If message is plain text or array, render as text
+          log.message.split("\n").map((line, index) => (
+            <pre key={index} className={getMessageClass(log.type)}>
+              <code>{line}</code>
+            </pre>
+          ))}
     </div>
   );
 };
 
 CodeLog.propTypes = {
-  log: PropTypes.object.isRequired,
+  log: PropTypes.shape({
+    type: PropTypes.string.isRequired,
+    message: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
+      .isRequired,
+  }).isRequired,
 };
 
 export default CodeLog;

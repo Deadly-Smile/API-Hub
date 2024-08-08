@@ -164,8 +164,7 @@ const CreateModelPanel = () => {
     document.getElementById("test-model-dialog").showModal();
   };
 
-  const handleTestFormSubmit = (parameters) => {
-    console.log(parameters);
+  const handleTestFormSubmit = (param) => {
     try {
       const pythonFile = new File([code], "script.py", {
         type: "text/x-python",
@@ -173,7 +172,7 @@ const CreateModelPanel = () => {
       uploadPythonScript({
         script: pythonFile,
         id: modelId,
-        parameters: parameters,
+        parameters: param,
       });
     } catch (e) {
       console.error(e);
@@ -251,10 +250,15 @@ const CreateModelPanel = () => {
       setIsFulfilled(true);
       setCodeLog({
         type: "success",
-        message: uploadPythonScriptResult?.data?.output,
+        message: uploadPythonScriptResult?.data,
       });
-    }
-    if (uploadPythonScriptResult.isError) {
+    } else if (uploadPythonScriptResult.isLoading) {
+      setIsFulfilled(false);
+      setCodeLog({
+        type: "info",
+        message: "Uploading...",
+      });
+    } else if (uploadPythonScriptResult.isError) {
       setCodeLog({
         type: "error",
         message: uploadPythonScriptResult?.error?.data?.message,
@@ -433,11 +437,13 @@ const CreateModelPanel = () => {
             </form>
           </CustomDialog>
           <CustomDialog title="Test your code:" componentId="test-model-dialog">
-            <ModelTestForm
-              parameters={parameters}
-              onSubmit={handleTestFormSubmit}
-              componentId="test-model-dialog"
-            />
+            {document.getElementById("test-model-dialog")?.open && (
+              <ModelTestForm
+                parameters={parameters}
+                onSubmit={handleTestFormSubmit}
+                componentId="test-model-dialog"
+              />
+            )}
           </CustomDialog>
         </>
       </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\AIModel;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\AIModelParameter;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,7 @@ use App\Helpers\DefaultPythonSnippet;
 use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\UploadPythonScriptRequest;
 use App\Http\Requests\CreateOrUpdateModelRequest;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -136,6 +138,7 @@ class ModelController extends Controller
         }
     }
 
+    // works for now
     private function generateScriptFile($model): string
     {
         $parameters = $model->parameters()->get();
@@ -147,11 +150,7 @@ class ModelController extends Controller
         foreach ($parameters as $parameter) {
             $name = $parameter->parameter_name;
             $functionArguments[] = $name;
-            if ($parameter->is_file) {
-                $functionCalls[] = "'{$name}': {$name}";
-            } else {
-                $functionCalls[] = "'{$name}': {$name}";
-            }
+            $functionCalls[] = "'{$name}': {$name}";
             $codeArguments[] = "sys.argv[{$i}]";
             $i++;
         }
@@ -159,20 +158,27 @@ class ModelController extends Controller
         $functionArgumentsString = implode(', ', $functionArguments);
         $codeArgumentsString = implode(', ', $codeArguments);
 
+        // The script will now include importing the JSON module and returning arguments as JSON.
         $scriptTemplate = <<<EOD
 ###########################################################################
 # Do not edit this part of the code
 import sys
+import json
 ###########################################################################
 
-def predict({$functionArgumentsString}):
+def my_function({$functionArgumentsString}):
     # Your code here...
+    result = {
+        'argument_1': {$functionArguments[0]},
+        # Add your processing logic here...
+    }
+    return result
 
 ###########################################################################
 # Do not edit this part of the code
-predict(
-    {$codeArgumentsString}
-)
+if __name__ == "__main__":
+    result = my_function({$codeArgumentsString})
+    print(json.dumps(result))
 ###########################################################################
 EOD;
 
@@ -290,43 +296,121 @@ EOD;
     }
 
     // tested
-    public function uploadPythonScript(Request $request, $id)
+    public function uploadPythonScript(UploadPythonScriptRequest $request, $id): JsonResponse
     {
-        return response()->json(['request' => $request]);
-        $validator = Validator::make($request->all(), [
-            'script' => 'required|file|max:2048',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => 'validation error', 'errors' => $validator->errors()], 422);
-        }
-
-        $file = $request->file('script');
-        if ($file->getClientOriginalExtension() !== 'py') {
-            return response()->json(['error' => 'validation error', 'errors' => ['script' => ['The script field must be a file of type: py.']]], 422);
-        }
-
+        // return $request;
+        $arguments = [];
         $model = AIModel::findOrFail($id);
-        $user = auth()->user();
-        if (!$model) {
-            return response()->json(['error' => 'model not found'], 404);
-        } else if ($user->id !== $model->user_id && (Role::findOrFail($user->role_id)->slug !== 'admin' || Role::findOrFail($user->role_id)->slug !== 'master')) {
-            return response()->json(['error' => 'unauthorized'], 401);
+        $parameters = $model->parameters()->get();
+
+        foreach ($parameters as $parameter) {
+            if ($parameter->is_default) {
+                if ($parameter->is_file) {
+                    $arguments[] = [
+                        'id' => (int)$parameter->id,
+                        'value' => $parameter->file,
+                        'type' => 'file'
+                    ];
+                } else {
+                    $arguments[] = [
+                        'id' => (int)$parameter->id,
+                        'value' => $parameter->text,
+                        'type' => 'text'
+                    ];
+                }
+            }
         }
+
+        $filePaths = [];
+        foreach ($request->parameters as $index => $parameter) {
+            if ($parameter['is_file']) {
+                $file = $request->file("parameters.{$index}.value");
+
+                $fileName = 'file_' . Str::random(10) . "_" . $parameter['id'] . "." . $file->getClientOriginalExtension();
+                $path = $file->storeAs('parameters', $fileName, 'public');
+
+                $filePaths[] = $path;
+                $arguments[] = [
+                    'id' => (int)$parameter['id'],
+                    'value' => $path,
+                    'type' => 'file'
+                ];
+            } else {
+                $arguments[] = [
+                    'id' => (int)$parameter['id'],
+                    'value' => $parameter['value'],
+                    'type' => 'text'
+                ];
+            }
+        }
+
+        usort($arguments, function ($a, $b) {
+            return $a['id'] - $b['id'];
+        });
 
         if ($model->script_file && Storage::exists($model->script_file)) {
             Storage::delete($model->script_file);
         }
 
         $fileName = 'script_' . $id . '.py';
-        $path = $file->storeAs('scripts', $fileName, 'public');
+        $path = $request->file("script")->storeAs('scripts', $fileName, 'public');
 
         $model->script_file = $path;
         $model->save();
-        // needs work
-        $output = $this->testScript($model->model_file, $model->test_file, $model->script_file);
-        return $output;
+
+        $output = $this->testScript($arguments, $path);
+
+        // clean up process
+        // Delete the temporary files
+        foreach ($filePaths as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
+        return response()->json($output);
     }
+
+    private function testScript($arguments, $scriptPath)
+    {
+        $basePath = base_path() . '/public/storage/';
+        $scriptFilePath = $basePath . 'scripts/' . basename($scriptPath);
+
+        $processedArguments = [];
+        foreach ($arguments as $arg) {
+            if ($arg['type'] === 'file') {
+                $filePath = $basePath . 'parameters/' . basename($arg['value']);
+                $processedArguments[] = $filePath;
+            } else {
+                $processedArguments[] = $arg['value'];
+            }
+        }
+
+        $flattenedArguments = array_merge(['python3', $scriptFilePath], $processedArguments);
+
+        // return $flattenedArguments;
+        $process = new Process($flattenedArguments);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            $errorOutput = $process->getErrorOutput();
+            $cleanedErrorOutput = preg_replace('/File ".*", /', '', $errorOutput);
+
+            return response()->json([
+                'error' => 'Process failed',
+                'message' => $cleanedErrorOutput,
+            ], 400);
+        }
+
+        // old
+        // $output = $process->getOutput();
+        // return response()->json(['output' => $output]);
+
+        // new
+        $output = $process->getOutput();
+        $result = json_decode($output, true);
+
+        return $result;
+    }
+
 
     // need testing
     public function uploadDocumentation(Request $request, $id): JsonResponse
@@ -417,33 +501,6 @@ EOD;
 
         return $query->paginate($perPage);
     }
-
-    // tested
-    private function testScript($modelPath, $imagePath, $scriptPath)
-    {
-        $basePath = base_path();
-        $scriptFilePath = $basePath . '/public/storage/scripts/' . basename($scriptPath);
-        $modelFilePath = $basePath . '/public/storage/models/' . basename($modelPath);
-        $imageFilePath = $basePath . '/public/storage/images/' . basename($imagePath);
-
-        $process = new Process(['python3', $scriptFilePath, $modelFilePath, $imageFilePath]);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            $errorOutput = $process->getErrorOutput();
-            $cleanedErrorOutput = preg_replace('/File ".*", /', '', $errorOutput);
-
-            return response()->json([
-                'error' => 'Process failed',
-                'message' => $cleanedErrorOutput,
-            ], 400);
-        }
-
-        $output = $process->getOutput();
-
-        return response()->json(['output' => $output]);
-    }
-
 
     // need testing
     public function predictModel(Request $request, $id): JsonResponse

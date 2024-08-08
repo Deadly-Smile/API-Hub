@@ -2,37 +2,34 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 
 const ModelTestForm = ({ parameters, onSubmit, componentId }) => {
-  const initialState = parameters.reduce((acc, parameter) => {
-    if (!parameter.is_default) {
-      acc[`${parameter.id}`] = parameter.is_file ? null : "";
-    }
-    return acc;
-  }, {});
-
-  const [formState, setFormState] = useState(initialState);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormState((prevState) => ({
-      ...prevState,
-      [name]: value,
+  const initialFormState = parameters
+    .filter((parameter) => !parameter.is_default)
+    .map((parameter) => ({
+      id: parameter.id,
+      value: parameter.is_file ? null : "",
+      is_file: parameter.is_file,
     }));
+  const [formState, setFormState] = useState(initialFormState);
+
+  const handleChange = (e, index) => {
+    const { value } = e.target;
+    setFormState((prevState) =>
+      prevState.map((param, i) => (i === index ? { ...param, value } : param))
+    );
   };
 
-  const handleFileChange = (e) => {
-    const { name } = e.target;
+  const handleFileChange = (e, index) => {
     const file = e.target.files[0];
-    setFormState((prevState) => ({
-      ...prevState,
-      [name]: file,
-    }));
+    setFormState((prevState) =>
+      prevState.map((param, i) =>
+        i === index ? { ...param, value: file } : param
+      )
+    );
   };
 
   const renderForm = () => {
-    return parameters.map((parameter, index) => {
-      if (parameter.is_default) return null;
-      const inputName = `${parameter.id}`;
-
+    return formState.map((param, index) => {
+      const parameter = parameters.find((p) => p.id === param.id);
       return (
         <div
           key={index}
@@ -44,16 +41,14 @@ const ModelTestForm = ({ parameters, onSubmit, componentId }) => {
               <input
                 className="file-input file-input-bordered checkbox-accent"
                 type="file"
-                name={inputName}
-                onChange={handleFileChange}
+                onChange={(e) => handleFileChange(e, index)}
                 required={parameter.is_required}
               />
             ) : (
               <textarea
                 className="textarea textarea-bordered textarea-accent"
-                name={inputName}
-                value={formState[inputName] || ""}
-                onChange={handleChange}
+                value={param.value}
+                onChange={(e) => handleChange(e, index)}
                 required={parameter.is_required}
               />
             )}
@@ -72,9 +67,7 @@ const ModelTestForm = ({ parameters, onSubmit, componentId }) => {
         document.getElementById(componentId).close();
       }}
     >
-      {parameters.every((param) => param.is_default) && (
-        <label>No fillable inputs</label>
-      )}
+      {formState.length === 0 && <label>No fillable inputs</label>}
       {renderForm()}
       <div className="flex justify-end">
         <button type="submit" className="btn btn-accent">
