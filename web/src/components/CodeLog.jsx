@@ -13,16 +13,6 @@ const CodeLog = ({ log }) => {
     }
   };
 
-  // Function to check if a string is valid JSON
-  const isJson = (str) => {
-    try {
-      JSON.parse(str);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
   // Function to render JSON objects with indentation
   const renderJson = (json) => {
     return (

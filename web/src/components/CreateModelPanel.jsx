@@ -62,6 +62,7 @@ const CreateModelPanel = () => {
   const isLoadingContext = useContext(LoadingContext);
   const [modelUpdate, setModelUpdate] = useState(false);
   const [code, setCode] = useState("");
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -106,62 +107,40 @@ const CreateModelPanel = () => {
       setModelId(createModelResult?.data?.model?.id);
       setParameters(createModelResult?.data?.parameters);
       setPythonCode(createModelResult?.data?.code);
-      if (createModelResult.status === 201) {
+      setToastList([{ message: "Successful", type: "success" }]);
+    }
+    if (createModelResult.isError) {
+      if (createModelResult.error?.status == 404) {
+        setToastList([{ message: "Model not found", type: "error" }]);
+      } else if (createModelResult.error?.status == 400) {
         setToastList([
-          { message: "Model created successfully", type: "success" },
+          { message: "An unexpected error occurred", type: "error" },
         ]);
-      } else if (createModelResult.status === 200) {
-        setToastList([
-          { message: "Model updated successfully", type: "success" },
-        ]);
+      } else if (createModelResult.error?.status == 500) {
+        setToastList([{ message: "Internal server error", type: "error" }]);
+      } else if (createModelResult.error?.status == 422) {
+        Object.keys(createModelResult?.error?.data?.errors).forEach((field) => {
+          createModelResult?.error?.data?.errors[field].forEach(
+            (errorMessage) => {
+              setToastList((prevToastList) => [
+                ...prevToastList,
+                { message: errorMessage, type: "error" },
+              ]);
+            }
+          );
+        });
+      } else {
+        setToastList([{ message: "Don't know what happened", type: "error" }]);
       }
-    } else if (createModelResult.status === 404) {
-      setToastList([{ message: "Model not found", type: "error" }]);
-    } else if (createModelResult.status === 400) {
-      setToastList([
-        { message: "An unexpected error occurred", type: "error" },
-      ]);
-    } else if (createModelResult.status === 500) {
-      setToastList([{ message: "Internal server error", type: "error" }]);
-    } else if (createModelResult.status === 422) {
-      Object.keys(createModelResult?.error?.data?.errors).forEach((field) => {
-        createModelResult?.error?.data?.errors[field].forEach(
-          (errorMessage) => {
-            setToastList((prevToastList) => [
-              ...prevToastList,
-              { message: errorMessage, type: "error" },
-            ]);
-          }
-        );
-      });
-    } else {
-      setToastList([{ message: "Don't know what happened", type: "error" }]);
     }
     handleShowToast();
-  }, [
-    createModelResult?.data?.code,
-    createModelResult?.data?.model?.id,
-    createModelResult?.data?.parameters,
-    createModelResult?.error?.data?.errors,
-    createModelResult.isSuccess,
-    createModelResult.status,
-  ]);
-
-  // const handleSubmitPython = (code) => {
-  //   try {
-  //     const pythonFile = new File([code], "script.py", {
-  //       type: "text/x-python",
-  //     });
-  //     uploadPythonScript({ script: pythonFile, id: modelId });
-  //   } catch (e) {
-  //     console.error(e);
-  //   }
-  // };
+  }, [createModelResult]);
 
   const testCode = (code) => {
     // open dialog
     setCode(code);
     document.getElementById("test-model-dialog").showModal();
+    setIsTestModalOpen(true);
   };
 
   const handleTestFormSubmit = (param) => {
@@ -177,6 +156,8 @@ const CreateModelPanel = () => {
     } catch (e) {
       console.error(e);
     }
+
+    setIsTestModalOpen(false);
   };
 
   const handleSubmitDoc = (code) => {
@@ -261,7 +242,7 @@ const CreateModelPanel = () => {
     } else if (uploadPythonScriptResult.isError) {
       setCodeLog({
         type: "error",
-        message: uploadPythonScriptResult?.error?.data?.message,
+        message: uploadPythonScriptResult?.error?.data,
       });
     }
   }, [uploadPythonScriptResult]);
@@ -437,7 +418,7 @@ const CreateModelPanel = () => {
             </form>
           </CustomDialog>
           <CustomDialog title="Test your code:" componentId="test-model-dialog">
-            {document.getElementById("test-model-dialog")?.open && (
+            {isTestModalOpen && (
               <ModelTestForm
                 parameters={parameters}
                 onSubmit={handleTestFormSubmit}

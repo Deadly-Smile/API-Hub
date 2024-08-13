@@ -6,9 +6,20 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [daisyui,
+  plugins: [
+    daisyui,
     daisyui: {
       themes: ["light", "dark", "cupcake"],
     },
   ],
+  preview: {
+    port: 3000,
+    strictPort: true,
+  },
+  server: {
+    port: 3000,
+    strictPort: true,
+    host: true,
+    origin: "http://0.0.0.0:3000",
+  },
 };

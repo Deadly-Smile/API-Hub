@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
+// can not use factory as it uses faker library and it is not loading properly
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -37,21 +38,21 @@ class DatabaseSeeder extends Seeder
 
     private function createUsers(): void
     {
-        User::factory()->create([
+        User::create([
             'name' => 'User-0',
             'email' => 'test@example0.com',
             'password' => '1234567890',
             'email_verified_at' => now(),
             'role_id' => Role::where('slug', 'master')->first()->id
         ]);
-        User::factory()->create([
+        User::create([
             'name' => 'User-1',
             'email' => 'test@example1.com',
             'password' => '1234567890',
             'email_verified_at' => now(),
             'role_id' => Role::where('slug', 'admin')->first()->id
         ]);
-        User::factory()->create([
+        User::create([
             'name' => 'User-2',
             'email' => 'test@example2.com',
             'password' => '1234567890',

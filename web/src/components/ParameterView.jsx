@@ -32,12 +32,7 @@ const ParameterView = ({ parameter, onDelete, onEdit }) => {
 };
 
 ParameterView.propTypes = {
-  parameter: PropTypes.shape({
-    parameter_name: PropTypes.string.isRequired,
-    is_file: PropTypes.bool.isRequired,
-    is_default: PropTypes.bool,
-    is_required: PropTypes.bool,
-  }).isRequired,
+  parameter: PropTypes.object.isRequired,
   onDelete: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
 };

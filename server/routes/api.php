@@ -6,6 +6,7 @@ use App\Http\Controllers\TestController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ModelController;
 use App\Http\Controllers\PredictController;
+use App\Models\User;
 
 Route::post('/predict', [PredictController::class, 'guessAnimel']);
 
@@ -40,6 +41,9 @@ Route::group(['prefix' => 'model'], function () {
 });
 // todo: learn unit testing
 Route::group(['prefix' => 'test'], function () {
+    Route::get('/test', function () {
+        return User::all();
+    });
     Route::get('/get-model', [TestController::class, 'getModel']);
     Route::get('/get-parameter', [TestController::class, 'getParameter']);
 });

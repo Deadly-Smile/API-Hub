@@ -158,7 +158,6 @@ class ModelController extends Controller
         $functionArgumentsString = implode(', ', $functionArguments);
         $codeArgumentsString = implode(', ', $codeArguments);
 
-        // The script will now include importing the JSON module and returning arguments as JSON.
         $scriptTemplate = <<<EOD
 ###########################################################################
 # Do not edit this part of the code
@@ -169,8 +168,7 @@ import json
 def my_function({$functionArgumentsString}):
     # Your code here...
     result = {
-        'argument_1': {$functionArguments[0]},
-        # Add your processing logic here...
+        # json response
     }
     return result
 
@@ -326,6 +324,14 @@ EOD;
             if ($parameter['is_file']) {
                 $file = $request->file("parameters.{$index}.value");
 
+                if (!$file) {
+                    if (AIModelParameter::find($parameter['id'])->is_required) {
+                        return response()->json(['error' => 'parameter ' . $parameter['id'] . ' content is required'], 422);
+                    } else {
+                        continue;
+                    }
+                }
+
                 $fileName = 'file_' . Str::random(10) . "_" . $parameter['id'] . "." . $file->getClientOriginalExtension();
                 $path = $file->storeAs('parameters', $fileName, 'public');
 
@@ -361,12 +367,11 @@ EOD;
         $output = $this->testScript($arguments, $path);
 
         // clean up process
-        // Delete the temporary files
         foreach ($filePaths as $path) {
             Storage::disk('public')->delete($path);
         }
 
-        return response()->json($output);
+        return $output;
     }
 
     private function testScript($arguments, $scriptPath)
@@ -394,10 +399,7 @@ EOD;
             $errorOutput = $process->getErrorOutput();
             $cleanedErrorOutput = preg_replace('/File ".*", /', '', $errorOutput);
 
-            return response()->json([
-                'error' => 'Process failed',
-                'message' => $cleanedErrorOutput,
-            ], 400);
+            return response()->json($cleanedErrorOutput, 400);
         }
 
         // old
@@ -408,7 +410,7 @@ EOD;
         $output = $process->getOutput();
         $result = json_decode($output, true);
 
-        return $result;
+        return response()->json($result, 200);;
     }
 
 

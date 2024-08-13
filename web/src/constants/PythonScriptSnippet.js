@@ -34,4 +34,33 @@ predict(image_path, model)
 ###########################################################################
 `;
 
+const test = `###########################################################################
+# Do not edit this part of the code
+import sys
+import json
+###########################################################################
+import tensorflow as tf
+import numpy as np
+
+tf.__version__
+
+
+def my_function(a, b, c):
+    # Your code here...
+    result = {
+        'a': a,
+        'b': b,
+        'c': c
+    }
+    return result
+
+
+###########################################################################
+# Do not edit this part of the code
+if __name__ == "__main__":
+    result = my_function('a', 'b', 'c')
+    print(json.dumps(result))
+###########################################################################
+`;
+
 export default PythonScriptSnippet;
